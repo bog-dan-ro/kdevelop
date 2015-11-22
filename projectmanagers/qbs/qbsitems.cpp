@@ -32,27 +32,24 @@ public:
     QbsProductFolder(const qbs::ProductData &productData, KDevelop::ProjectBaseItem *parent);
 };
 
-class QbsGroupFolder : public KDevelop::ProjectFolderItem, public QbsData
-{
-public:
-    QbsGroupFolder(const qbs::ProductData &productData, const qbs::GroupData &groupData, KDevelop::ProjectBaseItem *parent);
-};
-
 class QbsLibrary : public KDevelop::ProjectLibraryTargetItem
 {
 public:
-    QbsLibrary(const qbs::TargetArtifact &artifact, QbsProductFolder *folder);
+    QbsLibrary(const qbs::ProductData &productData, QbsProductFolder *folder);
 };
 
 class QbsExecutable: public KDevelop::ProjectExecutableTargetItem
 {
 public:
-    QbsExecutable(const qbs::TargetArtifact &artifact, QbsProductFolder *folder);
+    QbsExecutable(const qbs::ProductData &productData, QbsProductFolder *folder);
 
     // ProjectExecutableTargetItem interface
 public:
     QUrl builtUrl() const override;
     QUrl installedUrl() const override;
+
+private:
+    qbs::ProductData m_productData;
 };
 
 static void collectFilesForProject(QbsProjectFolder *folder)
@@ -66,17 +63,14 @@ static void collectFilesForProject(QbsProjectFolder *folder)
     foreach (const qbs::ProductData &product, project.products()) {
         if (product.location().filePath() != project.location().filePath())
             setProjectWatcher(folder, product.location().filePath());
+
         auto productFolder = new QbsProductFolder(product, folder);
         new KDevelop::ProjectFileItem(folder->project(), KDevelop::Path(product.location().toString()), productFolder);
-        foreach (const qbs::TargetArtifact &ta, product.targetArtifacts()) {
-            if (!ta.isValid())
-                continue;
-
-            if (ta.isExecutable())
-                new QbsExecutable(ta, productFolder);
+        if (product.isEnabled()) {
+            if (product.isRunnable())
+                new QbsExecutable(product, productFolder);
             else
-                new QbsLibrary(ta, productFolder);
-            qDebug() << ta.isValid() << ta.isExecutable() << ta.filePath() << ta.fileTags();
+                new QbsLibrary(product, productFolder);
         }
         foreach (const qbs::GroupData &group, product.groups()) {
             QStringList allFiles(group.allFilePaths());
@@ -136,8 +130,7 @@ QbsGroupFolder::QbsGroupFolder(const qbs::ProductData &productData, const qbs::G
     : KDevelop::ProjectFolderItem(groupData.name(), parent)
     , QbsData(productData, groupData)
 {
-                                                                                                                                     // TODO uncomment me when this https://codereview.qt-project.org/#/c/140859/ patch is merged
-    setPath(KDevelop::Path(QFileInfo(groupData.location().filePath()).absolutePath()/* + QLatin1Char('/') + groupData.prefix()*/));
+    setPath(KDevelop::Path(QFileInfo(groupData.location().filePath()).absolutePath() + QLatin1Char('/') + groupData.prefix()));
     setText(groupData.name());
 }
 
@@ -149,18 +142,24 @@ QbsProductFolder::QbsProductFolder(const qbs::ProductData &productData, KDevelop
     setText(productData.name());
 }
 
-QbsLibrary::QbsLibrary(const qbs::TargetArtifact &artifact, QbsProductFolder *folder)
-    : KDevelop::ProjectLibraryTargetItem(folder->project(), QFileInfo(artifact.filePath()).fileName(), folder)
+QbsLibrary::QbsLibrary(const qbs::ProductData &productData, QbsProductFolder *folder)
+    : KDevelop::ProjectLibraryTargetItem(folder->project(), productData.name(), folder)
 {
-    setPath(KDevelop::Path(artifact.filePath()));
-    setText(QFileInfo(artifact.filePath()).fileName()); // workaround https://bugreports.qt.io/browse/QBS-907
+//    setPath(KDevelop::Path(productData.filePath()));
+//    setText(QFileInfo(productData.filePath()).fileName()); // workaround https://bugreports.qt.io/browse/QBS-907
 }
 
-QbsExecutable::QbsExecutable(const qbs::TargetArtifact &artifact, QbsProductFolder *folder)
-    : KDevelop::ProjectExecutableTargetItem(folder->project(), QFileInfo(artifact.filePath()).fileName(), folder)
+QbsExecutable::QbsExecutable(const qbs::ProductData &productData, QbsProductFolder *folder)
+    : KDevelop::ProjectExecutableTargetItem(folder->project(), productData.name(), folder)
+    , m_productData(productData)
 {
-    setPath(KDevelop::Path(artifact.filePath()));
-    setText(QFileInfo(artifact.filePath()).fileName());// workaround https://bugreports.qt.io/browse/QBS-907
+    // workaround https://bugreports.qt.io/browse/QBS-907
+    foreach(const qbs::TargetArtifact &target, productData.targetArtifacts()) {
+        if (target.isExecutable()) {
+            setPath(KDevelop::Path(target.filePath()));
+            break;
+        }
+    }
 }
 
 QUrl QbsExecutable::builtUrl() const

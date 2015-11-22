@@ -37,7 +37,7 @@ public:
 
     // IProjectFileManager interface
 public:
-    Features features() const override { return Features(Folders | Targets | Files); }
+    Features features() const override { return Features(Folders | /*Targets | */Files); }
     QList<KDevelop::ProjectFolderItem *> parse(KDevelop::ProjectFolderItem *dom) override;
     KDevelop::ProjectFolderItem *import(KDevelop::IProject *project) override;
     KJob *createImportJob(KDevelop::ProjectFolderItem *item) override;
@@ -87,12 +87,18 @@ private:
     void doPrintMessage(qbs::LoggerLevel level, const QString &message, const QString &tag) override;
 
 private:
-    struct ProjectData {
+    class ProjectData {
+    public:
         ProjectData()
             : project(new qbs::Project) {}
 
+        bool configure(KDevelop::IProject *project);
         QSharedPointer<qbs::Project> project;
         qbs::SetupProjectParameters setupParams;
+
+    private:
+        bool setPaths();
+        bool setup(KDevelop::IProject *project);
     };
 
     QHash<KDevelop::IProject *, ProjectData> m_projects;

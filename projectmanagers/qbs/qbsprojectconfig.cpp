@@ -5,7 +5,7 @@
 
 #include <tools/settings.h>
 
-QbsProjectConfig::QbsProjectConfig(qbs::SetupProjectParameters &setupProjectParameters, QWidget *parent) :
+QbsProjectConfig::QbsProjectConfig(const qbs::SetupProjectParameters &setupProjectParameters, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::QbsProjectConfig),
     m_setupProjectParameters(setupProjectParameters)

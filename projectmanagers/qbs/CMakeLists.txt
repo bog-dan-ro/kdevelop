@@ -1,5 +1,7 @@
 project(qbsmanager)
 add_definitions(-DTRANSLATION_DOMAIN=\"kdevqbs\" -DQBS_ENABLE_PROJECT_FILE_UPDATES)
+add_definitions(-DQBS_INSTALL_PREFIX=\"/home/bogdan/.local\")
+
 include_directories(
     ${makebuilder_SOURCE_DIR}
     /home/bogdan/.local/include/qbs

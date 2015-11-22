@@ -31,8 +31,19 @@ QbsKJob::~QbsKJob()
 void QbsKJob::start()
 {
     m_job = m_createQbsJobFunction();
+    connect(m_job, &qbs::AbstractJob::finished, this, [this](bool success, qbs::AbstractJob *job) {
+        if (!success) {
+            setErrorText(job->error().toString());
+            setError(KJob::UserDefinedError);
+        } else {
+            setError(KJob::NoError);
+        }
+        emitResult();
+    });
     connect(m_job, &qbs::AbstractJob::taskStarted, this, [this](const QString &description, int maximumProgressValue, qbs::AbstractJob */*job*/){
         setToolTitle(description);
+        setTitle(description);
+        setObjectName(description);
         startOutput();
         emit KJob::description(this, description);
         setTotalAmount(Files, maximumProgressValue);
@@ -43,15 +54,6 @@ void QbsKJob::start()
     });
     connect(m_job, &qbs::AbstractJob::taskProgress, this, [this](int newProgressValue, qbs::AbstractJob */*job*/){
         setProcessedAmount(Files, newProgressValue);
-    });
-    connect(m_job, &qbs::AbstractJob::finished, this, [this](bool success, qbs::AbstractJob *job) {
-        if (!success) {
-            setErrorText(job->error().toString());
-            setError(KJob::UserDefinedError);
-        } else {
-            setError(KJob::NoError);
-        }
-        emitResult();
     });
 
     if (qbs::BuildJob *buildJob = dynamic_cast<qbs::BuildJob *>(m_job)) {

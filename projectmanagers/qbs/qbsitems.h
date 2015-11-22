@@ -19,6 +19,12 @@ protected:
     qbs::GroupData m_groupData;
 };
 
+class QbsGroupFolder : public KDevelop::ProjectFolderItem, public QbsData
+{
+public:
+    QbsGroupFolder(const qbs::ProductData &productData, const qbs::GroupData &groupData, KDevelop::ProjectBaseItem *parent);
+};
+
 class QbsProjectFolder : public QObject, public KDevelop::ProjectFolderItem
 {
     Q_OBJECT
